@@ -17,28 +17,18 @@
  * under the License.
  */
 
-package org.apache.samza.serializers
+package org.apache.samza.checkpoint
 
-import org.apache.samza.config.Config
+import org.apache.samza.metrics._
+import java.util.concurrent.ConcurrentHashMap
 
-/**
- * A serializer for strings
- */
-class StringSerdeFactory extends SerdeFactory[String] {
-  def getSerde(name: String, config: Config): Serde[String] =
-    new StringSerde(config.get("encoding", "UTF-8"))
-}
+import org.apache.samza.system.SystemStreamPartition
 
-class StringSerde(val encoding: String) extends Serde[String] {
-  def toBytes(obj: String): Array[Byte] = if (obj != null) {
-    obj.toString.getBytes(encoding)
-  } else {
-    null
-  }
+class OffsetManagerMetrics(val registry: MetricsRegistry = new MetricsRegistryMap) extends MetricsHelper {
 
-  def fromBytes(bytes: Array[Byte]): String = if (bytes != null) {
-    new String(bytes, 0, bytes.size, encoding)
-  } else {
-    null
+  val checkpointedOffsets = new ConcurrentHashMap[SystemStreamPartition, Gauge[String]]
+
+  def addCheckpointedOffset(systemStreamPartition: SystemStreamPartition, checkpointedOffset: String) {
+    checkpointedOffsets.put(systemStreamPartition, newGauge("%s-%s-%d-checkpointed-offset" format (systemStreamPartition.getSystem, systemStreamPartition.getStream, systemStreamPartition.getPartition.getPartitionId), checkpointedOffset))
   }
 }

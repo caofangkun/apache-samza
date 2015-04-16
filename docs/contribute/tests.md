@@ -47,26 +47,17 @@ To run Samza's unit tests against all permutations, run:
 
     bin/check-all.sh
 
-When run on Linux, this command requires you to set three environment variables:
+When run on Linux, this command requires you to set two environment variables:
 
-    JAVA6_HOME is not set.
     JAVA7_HOME is not set.
     JAVA8_HOME is not set.
 
 On Mac, check-all.sh will default to the appropriate path for each environment variable if it's not already set:
 
-    JAVA6_HOME is not set.
-    JAVA6_HOME defaulted to /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
     JAVA7_HOME is not set.
     JAVA7_HOME defaulted to /Library/Java/JavaVirtualMachines/jdk1.7.0_67.jdk/Contents/Home
     JAVA8_HOME is not set.
     JAVA8_HOME defaulted to /Library/Java/JavaVirtualMachines/jdk1.8.0_20.jdk/Contents/Home
-
-### Travis CI
-
-[Travis CI](https://travis-ci.org/apache/incubator-samza) has been configured to run Samza's unit tests after every commit to Samza's [master branch](https://git-wip-us.apache.org/repos/asf?p=samza.git;a=tree). The test results are mailed to the [developer mailing list](/community/mailing-lists.html), and posted in the [IRC channel](/community/irc.html).
-
-[![Build Status](https://travis-ci.org/apache/incubator-samza.svg?branch=master)](https://travis-ci.org/apache/incubator-samza)
 
 ### Running Integration Tests Locally
 

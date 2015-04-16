@@ -61,6 +61,7 @@ import org.apache.samza.serializers.model.SamzaObjectMapper
 import org.apache.samza.config.JobConfig.Config2Job
 import java.lang.Thread.UncaughtExceptionHandler
 import org.apache.samza.serializers._
+import org.apache.samza.checkpoint.OffsetManagerMetrics
 
 object SamzaContainer extends Logging {
   def main(args: Array[String]) {
@@ -147,6 +148,7 @@ object SamzaContainer extends Logging {
     val samzaContainerMetrics = new SamzaContainerMetrics(containerName, registry)
     val systemProducersMetrics = new SystemProducersMetrics(registry)
     val systemConsumersMetrics = new SystemConsumersMetrics(registry)
+    val offsetManagerMetrics = new OffsetManagerMetrics(registry)
 
     val inputSystemStreamPartitions = containerModel
       .getTasks
@@ -336,7 +338,7 @@ object SamzaContainer extends Logging {
 
     info("Got checkpoint manager: %s" format checkpointManager)
 
-    val offsetManager = OffsetManager(inputStreamMetadata, config, checkpointManager, systemAdmins)
+    val offsetManager = OffsetManager(inputStreamMetadata, config, checkpointManager, systemAdmins, offsetManagerMetrics)
 
     info("Got offset manager: %s" format offsetManager)
 
@@ -400,6 +402,10 @@ object SamzaContainer extends Logging {
 
     info("Got commit milliseconds: %s" format taskCommitMs)
 
+    val taskShutdownMs = config.getShutdownMs.getOrElse(5000L)
+
+    info("Got shutdown timeout milliseconds: %s" format taskShutdownMs)
+
     // Wire up all task-instance-level (unshared) objects.
 
     val taskNames = containerModel
@@ -414,7 +420,7 @@ object SamzaContainer extends Logging {
     // Increment by 1 because partition starts from 0, but we need the absolute count,
     // this value is used for change log topic creation.
     val maxChangeLogStreamPartitions = containerModel.getTasks.values
-            .max(Ordering.by{task:TaskModel => task.getChangelogPartition.getPartitionId})
+            .max(Ordering.by { task:TaskModel => task.getChangelogPartition.getPartitionId })
             .getChangelogPartition.getPartitionId + 1
 
     val taskInstances: Map[TaskName, TaskInstance] = containerModel.getTasks.values.map(taskModel => {
@@ -494,6 +500,7 @@ object SamzaContainer extends Logging {
         metrics = taskInstanceMetrics,
         consumerMultiplexer = consumerMultiplexer,
         collector = collector,
+        containerContext = containerContext,
         offsetManager = offsetManager,
         storageManager = storageManager,
         reporters = reporters,
@@ -508,7 +515,8 @@ object SamzaContainer extends Logging {
       consumerMultiplexer = consumerMultiplexer,
       metrics = samzaContainerMetrics,
       windowMs = taskWindowMs,
-      commitMs = taskCommitMs)
+      commitMs = taskCommitMs,
+      shutdownMs = taskShutdownMs)
 
     info("Samza container setup complete.")
 
@@ -541,8 +549,8 @@ class SamzaContainer(
       startMetrics
       startOffsetManager
       startStores
-      startTask
       startProducers
+      startTask
       startConsumers
 
       info("Entering run loop.")
@@ -555,8 +563,8 @@ class SamzaContainer(
       info("Shutting down.")
 
       shutdownConsumers
-      shutdownProducers
       shutdownTask
+      shutdownProducers
       shutdownStores
       shutdownOffsetManager
       shutdownMetrics
